@@ -1,0 +1,144 @@
+{
+  "formato": "mlp-json",
+  "versao": 1,
+  "n_entradas": 2,
+  "n_camadas": 2,
+  "camadas": [
+    {
+      "n_neuronios": 8,
+      "ativacao": "tanh",
+      "inicializacao": "xavier",
+      "neuronios": [
+        {
+          "pesos": [
+            12.016789282075127,
+            0.7199987898781433
+          ],
+          "vies": -9.280762084075166
+        },
+        {
+          "pesos": [
+            -20.025643028944906,
+            -7.481203075190739
+          ],
+          "vies": 10.512739948877726
+        },
+        {
+          "pesos": [
+            -24.240578786725898,
+            -9.29254712728972
+          ],
+          "vies": -8.83093523684617
+        },
+        {
+          "pesos": [
+            24.563937020512746,
+            9.431602777231674
+          ],
+          "vies": 8.954413068164122
+        },
+        {
+          "pesos": [
+            -20.09834563223864,
+            -7.512461228076263
+          ],
+          "vies": 10.551806682040086
+        },
+        {
+          "pesos": [
+            -20.087545009898207,
+            -7.507850156083865
+          ],
+          "vies": 10.545994506476077
+        },
+        {
+          "pesos": [
+            -27.099860698049714,
+            -7.979834268123504
+          ],
+          "vies": 18.72932022220339
+        },
+        {
+          "pesos": [
+            8.365007207705942,
+            0.1510831895950792
+          ],
+          "vies": -7.944667284928456
+        }
+      ]
+    },
+    {
+      "n_neuronios": 1,
+      "ativacao": "linear",
+      "inicializacao": "xavier",
+      "neuronios": [
+        {
+          "pesos": [
+            -10.157156908766867,
+            23.24157692910275,
+            26.811808376930642,
+            -29.68166209317126,
+            23.756136359141795,
+            23.68355878653117,
+            45.04898988737437,
+            -13.090558696105525
+          ],
+          "vies": 2505.1907682284254
+        }
+      ]
+    }
+  ],
+  "normalizacao": {
+    "tipo": "zscore",
+    "parametros": {
+      "medias": [
+        308.4,
+        59.76
+      ],
+      "desvios": [
+        108.94695957207801,
+        41.99931428011653
+      ]
+    }
+  },
+  "metadados": {
+    "inicializacao": {
+      "seed": 42,
+      "metodo": "recomendado"
+    },
+    "colunas_entrada": [
+      "sementes_m2",
+      "nitrogenio_kg_ha"
+    ],
+    "colunas_saida": [
+      "produtividade_kg_ha"
+    ],
+    "dataset": "D:\\Redes Neurais - IA\\datasets\\dataset.csv",
+    "divisao": {
+      "percentuais": [
+        70.0,
+        15.0,
+        15.0
+      ],
+      "seed": 42,
+      "tamanhos": {
+        "treino": 125,
+        "validacao": 27,
+        "teste": 27
+      }
+    },
+    "treinamento": {
+      "algoritmo": "SGD",
+      "taxa_aprendizado": 0.0001,
+      "epocas": 3000,
+      "embaralhar": true,
+      "seed": 42,
+      "vies_saida_media": true
+    },
+    "resultado": {
+      "mse_treino": 37630.24564461926,
+      "mse_validacao": 27442.732388442586,
+      "mse_teste": 32565.071959762423
+    }
+  }
+}
