@@ -3,14 +3,18 @@
 Aplicação para construir, configurar, treinar, salvar, carregar e utilizar redes
 Multilayer Perceptron. Os algoritmos (propagação direta, MSE, retropropagação e
 descida do gradiente) são implementados do zero em **Python puro** — apenas a
-biblioteca padrão é usada (`csv`, `json`, `math`, `random`, `argparse`).
+biblioteca padrão é usada (`csv`, `json`, `math`, `random`, `argparse`,
+`http.server`).
+
+Há três formas de usar a mesma biblioteca: **linha de comando**, **menu
+interativo** e **interface web local** (treino, curvas de MSE e previsão no navegador).
 
 Requisito: Python 3.8 ou superior. Não há dependências a instalar.
 
 ## Estrutura
 
 ```
-main.py                 ponto de entrada (CLI e menu interativo)
+main.py                 ponto de entrada (CLI, menu interativo e servidor web)
 mlp/                    biblioteca (núcleo, sem interface)
   ativacoes.py          1.4  Linear, Sigmoid, Tanh, ReLU + derivadas
   inicializacao.py      1.5  Xavier/Glorot e He, com seed
@@ -24,10 +28,14 @@ mlp/                    biblioteca (núcleo, sem interface)
   persistencia.py       1.11 salvar/carregar em JSON
   previsao.py           1.12 previsão com normalização registrada
 app/                    interface
-  cli.py                subcomandos criar / treinar / avaliar / prever / info
+  cli.py                subcomandos criar / treinar / avaliar / prever / info / web / menu
   menu.py               menu interativo (monta e executa os mesmos subcomandos)
   graficos.py           curva de MSE em SVG
-datasets/dataset.csv    dataset fornecido
+  web.py                servidor HTTP local (API JSON) que reaproveita a biblioteca mlp
+  web.html              página única da interface web (HTML/CSS/JS, sem dependências)
+datasets/dataset.csv    dataset fornecido (179 exemplos: sementes_m2, nitrogenio_kg_ha, produtividade_kg_ha)
+modelos/                redes, históricos e gráficos gerados (exemplos incluídos)
+  rede_web.json         rede salva pela interface web (sobrescrita a cada treino)
 tests/test_mlp.py       testes automatizados
 ```
 
@@ -38,6 +46,29 @@ tests/test_mlp.py       testes automatizados
 ```
 python main.py
 ```
+
+Pergunta os parâmetros (com valores padrão sugeridos) e executa os mesmos
+subcomandos da linha de comando. Opções: 1 criar rede, 2 treinar, 3 avaliar (MSE),
+4 prever, 5 mostrar informações da rede, 0 sair.
+
+### Interface web
+
+```
+python main.py web                # http://127.0.0.1:8000
+python main.py web --porta 8080   # outra porta
+```
+
+Abra o endereço no navegador. A página permite:
+
+- escolher um CSV da pasta `datasets/` ou enviar outro arquivo, e marcar as colunas de entrada e de saída;
+- definir camadas ocultas e de saída (`neurônios:ativação`), seeds, divisão treino/validação/teste, normalização, taxa, épocas e o viés de saída pela média do treino;
+- treinar e ver o MSE de treino/validação/teste, a curva de MSE por época e o gráfico previsto × real do conjunto de teste (junto com a referência de quem sempre prevê a média);
+- prever novos valores com a última rede treinada.
+
+A rede treinada é salva em `modelos/rede_web.json` (sobrescrito a cada treino). O
+servidor escuta apenas em `127.0.0.1` e usa só a biblioteca padrão; encerre com
+`Ctrl+C`. A API usada pela página: `GET /api/datasets`, `POST /api/cabecalho`,
+`POST /api/treinar` e `POST /api/prever`.
 
 ### Linha de comando
 
@@ -66,6 +97,10 @@ python main.py treinar --rede modelos/rede.json --dados datasets/dataset.csv ^
 - `--entradas`/`--saidas` aceitam nomes ou índices (base 0). Padrão: última coluna é a saída.
 - A cada época são exibidos o MSE de treino e de validação; ao final, o MSE de teste.
 - `--historico` grava o MSE por época em CSV e `--grafico` desenha a curva em SVG.
+- `--normalizacao` aceita `nenhuma` (padrão), `minmax` ou `zscore`; `--divisao` recebe `TREINO,VALIDACAO,TESTE` (padrão `70,15,15`).
+- `--sem-embaralhar` desliga o embaralhamento por época; `--log-a-cada N` controla a frequência do log; `--mostrar-teste N` exibe N exemplos de teste (esperado → previsto).
+- `-o/--saida-rede` define onde salvar a rede treinada (sem ele, sobrescreve `--rede`).
+- Treinar uma rede já treinada continua a partir dos pesos atuais (com aviso). Se o MSE divergir, o treino é interrompido com erro.
 
 **3. Avaliar** (MSE sobre o arquivo inteiro ou sobre um subconjunto; a divisão é
 reproduzida a partir da seed registrada na rede):
@@ -78,7 +113,11 @@ python main.py avaliar --rede modelos/rede_treinada.json --dados datasets/datase
 
 ```
 python main.py prever --rede modelos/rede_treinada.json --valores 250,60 --valores 300,45
+python main.py prever --rede modelos/rede_treinada.json --arquivo novos_dados.csv
 ```
+
+Com `--arquivo`, o CSV precisa de cabeçalho; são usadas as colunas com os nomes de
+entrada registrados no treino (ou, se não existirem, todas as colunas).
 
 **5. Inspecionar** uma rede salva:
 
@@ -92,9 +131,9 @@ python main.py info --rede modelos/rede_treinada.json --pesos
 python -m unittest discover -s tests -v
 ```
 
-Incluem verificação do gradiente do backpropagation por diferenças finitas,
+São 14 testes. Incluem verificação do gradiente do backpropagation por diferenças finitas,
 reprodutibilidade por seed, XOR, divisão/normalização do dataset e
-equivalência das saídas após salvar e carregar.
+equivalência das saídas após salvar e carregar. A interface web não tem testes automatizados.
 
 ## Decisões de implementação
 
@@ -123,6 +162,10 @@ ou fazem a ReLU divergir. Com essa opção, o viés de cada neurônio de saída
 começa com a média das saídas do **conjunto de treino** (sem vazar informação de
 validação/teste), a rede parte prevendo a média e aprende só o desvio. É opcional
 e fica registrada nos metadados.
+
+**Interface web.** `app/web.py` apenas orquestra `mlp` (ler CSV, construir, dividir, treinar,
+salvar, prever); nenhum algoritmo é reimplementado. Os mesmos parâmetros da CLI estão
+disponíveis, exceto `--inicializacao` (usa o método recomendado por ativação).
 
 **Referência para o dataset.** A variância das produtividades é ≈ 61.600 (MSE de
 quem sempre prevê a média) e a variância *dentro* de cada combinação
