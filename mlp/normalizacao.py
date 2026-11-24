@@ -5,9 +5,19 @@ e depois aplicados (``transformar``) aos três subconjuntos e às novas entradas
 da previsão. As saídas esperadas nunca são normalizadas.
 """
 
+from typing import List
+
 
 class Normalizador:
     nome = ""
+
+    @property
+    def ajustado(self):
+        raise NotImplementedError
+
+    @property
+    def n_atributos(self):
+        raise NotImplementedError
 
     def ajustar(self, amostras):
         raise NotImplementedError
@@ -42,12 +52,12 @@ class MinMax(Normalizador):
     nome = "minmax"
 
     def __init__(self, minimos=None, maximos=None):
-        self.minimos = list(minimos) if minimos is not None else None
-        self.maximos = list(maximos) if maximos is not None else None
+        self.minimos: List[float] = list(minimos) if minimos is not None else []
+        self.maximos: List[float] = list(maximos) if maximos is not None else []
 
     @property
     def ajustado(self):
-        return self.minimos is not None
+        return len(self.minimos) > 0
 
     @property
     def n_atributos(self):
@@ -82,12 +92,12 @@ class ZScore(Normalizador):
     nome = "zscore"
 
     def __init__(self, medias=None, desvios=None):
-        self.medias = list(medias) if medias is not None else None
-        self.desvios = list(desvios) if desvios is not None else None
+        self.medias: List[float] = list(medias) if medias is not None else []
+        self.desvios: List[float] = list(desvios) if desvios is not None else []
 
     @property
     def ajustado(self):
-        return self.medias is not None
+        return len(self.medias) > 0
 
     @property
     def n_atributos(self):

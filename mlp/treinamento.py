@@ -60,7 +60,7 @@ class Treinador:
                 mse_treino = math.inf
                 mse_val = None
 
-            if not math.isfinite(mse_treino):
+            if mse_treino is None or not math.isfinite(mse_treino):
                 raise TreinamentoDivergiu(
                     f"O treinamento divergiu na época {epoca} (erro infinito/NaN). "
                     "Reduza a taxa de aprendizado ou normalize as entradas."

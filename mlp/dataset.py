@@ -3,8 +3,9 @@
 import csv
 import random
 from dataclasses import dataclass, field
+from typing import Optional
 
-from .normalizacao import criar_normalizador
+from .normalizacao import Normalizador, criar_normalizador
 
 
 @dataclass
@@ -33,7 +34,7 @@ class DivisaoDataset:
     treino: Dataset
     validacao: Dataset
     teste: Dataset
-    normalizador: object = None
+    normalizador: Optional[Normalizador] = None
     seed: object = None
     percentuais: tuple = ()
 

@@ -303,6 +303,10 @@ def criar_parser():
     i.add_argument("--pesos", action="store_true", help="lista também pesos e vieses")
     i.set_defaults(func=cmd_info)
 
+    w = sub.add_parser("web", help="interface web local (treino, curvas de MSE e previsão)")
+    w.add_argument("--porta", type=int, default=8000)
+    w.set_defaults(func=lambda a: __import__("app.web", fromlist=["servir"]).servir(a.porta))
+
     m = sub.add_parser("menu", help="modo interativo")
     m.set_defaults(func=None)
     return p

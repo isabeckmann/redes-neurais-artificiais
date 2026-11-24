@@ -152,11 +152,14 @@ class TestTreinoPersistenciaPrevisao(unittest.TestCase):
         rede = RedeNeural.construir(2, [(6, "tanh"), (1, "linear")], seed=42)
         rede.normalizacao = div.normalizador
         mse_inicial = mse(rede, div.treino.entradas, div.treino.saidas)
+        assert mse_inicial is not None
         hist = Treinador(rede, 0.01, 200, seed=42).treinar(div.treino, div.validacao)
         self.assertEqual(len(hist), 200)
         self.assertIsNotNone(hist[-1].mse_validacao)
         self.assertLess(hist[-1].mse_treino, mse_inicial / 50)
-        self.assertTrue(math.isfinite(mse(rede, div.teste.entradas, div.teste.saidas)))
+        mse_teste = mse(rede, div.teste.entradas, div.teste.saidas)
+        assert mse_teste is not None
+        self.assertTrue(math.isfinite(mse_teste))
 
         with tempfile.TemporaryDirectory() as pasta:
             caminho = os.path.join(pasta, "rede.json")

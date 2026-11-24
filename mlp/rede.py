@@ -1,8 +1,11 @@
 """Entidade Rede Neural (requisitos 1.3, 1.6 e 1.8)."""
 
+from typing import Optional
+
 from .camada import Camada
 from .erro import erro_quadratico, gradiente_erro
 from .inicializacao import criar_gerador
+from .normalizacao import Normalizador
 
 
 class RedeNeural:
@@ -20,7 +23,7 @@ class RedeNeural:
             raise ValueError("A rede precisa ter pelo menos uma entrada.")
         self.n_entradas = int(n_entradas)
         self.camadas = []
-        self.normalizacao = None
+        self.normalizacao: Optional[Normalizador] = None
         self.metadados = {}
 
     # ------------------------------------------------------------------ montagem
