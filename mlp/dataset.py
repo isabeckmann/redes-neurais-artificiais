@@ -4,6 +4,7 @@ import csv
 import random
 from dataclasses import dataclass, field
 from typing import Optional
+import math
 
 from .normalizacao import Normalizador, criar_normalizador
 
@@ -57,6 +58,8 @@ def _resolver_colunas(especificacao, cabecalho, nome_param):
             raise ValueError(
                 f"Coluna de {nome_param} não encontrada: '{item}'. Colunas do arquivo: {', '.join(cabecalho)}."
             )
+        if len(indices) != len(set(indices)):
+            raise ValueError(f"Existem colunas duplicadas em {nome_param}.")
     return indices
 
 
@@ -113,10 +116,17 @@ def ler_csv(caminho, colunas_entrada=None, colunas_saida=None, delimitador=None)
                 f"Linha {n_linha}: {len(linha)} coluna(s), esperado {len(cabecalho)}."
             )
         try:
-            ds.entradas.append([float(linha[i]) for i in idx_entrada])
-            ds.saidas.append([float(linha[i]) for i in idx_saida])
+            valores_entrada = [float(linha[i]) for i in idx_entrada]
+            valores_saida = [float(linha[i]) for i in idx_saida]
         except ValueError:
             raise ValueError(f"Linha {n_linha}: valor não numérico.") from None
+
+        for valor in valores_entrada + valores_saida:
+            validar_valor_finito(valor)
+
+        ds.entradas.append(valores_entrada)
+        ds.saidas.append(valores_saida)
+
     if not ds.entradas:
         raise ValueError(f"O arquivo {caminho} não possui exemplos.")
     return ds
@@ -135,28 +145,68 @@ def verificar_compatibilidade(rede, dataset):
         raise ValueError("Dataset incompatível com a rede: " + "; ".join(erros) + ".")
 
 
+
 def dividir(dataset, perc_treino, perc_validacao, perc_teste, seed=None):
     """Divide aleatoriamente em treino/validação/teste (percentuais somando 100)."""
     percs = (float(perc_treino), float(perc_validacao), float(perc_teste))
+
     if any(p < 0 for p in percs):
         raise ValueError("Os percentuais não podem ser negativos.")
+
     if abs(sum(percs) - 100.0) > 1e-6:
-        raise ValueError(f"Os percentuais devem totalizar 100% (soma atual: {sum(percs):g}%).")
+        raise ValueError(
+            f"Os percentuais devem totalizar 100% (soma atual: {sum(percs):g}%)."
+        )
 
     n = len(dataset)
     indices = list(range(n))
     random.Random(seed).shuffle(indices)
 
+    # Identifica os conjuntos que precisam receber exemplos
+    ativos = [i for i, p in enumerate(percs) if p > 0]
+
+    if n < len(ativos):
+        raise ValueError(
+            "Exemplos insuficientes para preencher todos os conjuntos solicitados."
+        )
+
+    # Calcula a quantidade de exemplos de cada conjunto
     n_treino = round(n * percs[0] / 100.0)
     n_val = round(n * percs[1] / 100.0)
-    n_val = min(n_val, n - n_treino)
-    if n_treino < 1:
-        raise ValueError("O conjunto de treinamento ficou vazio; aumente o percentual de treino.")
+    n_teste = n - n_treino - n_val
+
+    quantidades = [n_treino, n_val, n_teste]
+
+    # Garante pelo menos um exemplo em cada conjunto ativo
+    for i in ativos:
+        if quantidades[i] == 0:
+            doador = next(
+                (j for j in range(3) if quantidades[j] > 1),
+                None
+            )
+
+            if doador is None:
+                raise ValueError(
+                    "Não foi possível distribuir os exemplos entre os conjuntos."
+                )
+
+            quantidades[doador] -= 1
+            quantidades[i] += 1
+
+    n_treino, n_val, n_teste = quantidades
 
     treino = dataset.subconjunto(indices[:n_treino])
-    validacao = dataset.subconjunto(indices[n_treino:n_treino + n_val])
-    teste = dataset.subconjunto(indices[n_treino + n_val:])
+
+    validacao = dataset.subconjunto(
+        indices[n_treino:n_treino + n_val]
+    )
+
+    teste = dataset.subconjunto(
+        indices[n_treino + n_val:]
+    )
+
     return DivisaoDataset(treino, validacao, teste, None, seed, percs)
+
 
 
 def preparar(dataset, percentuais=(70, 15, 15), seed=None, normalizacao=None):
@@ -173,3 +223,8 @@ def preparar(dataset, percentuais=(70, 15, 15), seed=None, normalizacao=None):
             parte.entradas = normalizador.transformar(parte.entradas)
     divisao.normalizador = normalizador
     return divisao
+
+def validar_valor_finito(valor):
+    """Verifica se o valor é finito (não é NaN ou infinito)."""
+    if not math.isfinite(valor):
+        raise ValueError(f"Valor não finito encontrado: {valor}.")

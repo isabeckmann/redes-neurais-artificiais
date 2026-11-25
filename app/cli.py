@@ -72,6 +72,17 @@ def cmd_criar(a):
     print(rede.descrever())
     print(f"\nSalva em: {a.arquivo}")
 
+def _aplicar_normalizador(divisao, normalizador):
+    """Aplica parâmetros já ajustados, sem recalcular a normalização."""
+    if normalizador is not None:
+        if not normalizador.ajustado:
+            raise ValueError("O normalizador salvo não está ajustado.")
+
+        for parte in (divisao.treino, divisao.validacao, divisao.teste):
+            parte.entradas = normalizador.transformar(parte.entradas)
+
+    divisao.normalizador = normalizador
+    return divisao
 
 def cmd_treinar(a):
     rede = carregar_rede(a.rede)
@@ -84,10 +95,41 @@ def cmd_treinar(a):
     percentuais = _numeros(a.divisao)
     if len(percentuais) != 3:
         raise ValueError("--divisao deve ter três percentuais: TREINO,VALIDACAO,TESTE")
-    if "treinamento" in meta:
-        print("Aviso: a rede já foi treinada; o treinamento continuará a partir dos pesos atuais.")
-    divisao = preparar(dataset, percentuais, seed=a.seed_divisao, normalizacao=a.normalizacao)
+    ja_treinada = "treinamento" in meta
 
+    if ja_treinada:
+        print("Aviso: a rede já foi treinada; o treinamento continuará a partir dos pesos atuais.")
+
+        normalizador_salvo = rede.normalizacao
+
+    if ja_treinada or normalizador_salvo is not None:
+        normalizacao_atual = (
+            normalizador_salvo.nome if normalizador_salvo is not None else "nenhuma"
+        )
+
+        if a.normalizacao is not None and a.normalizacao != normalizacao_atual:
+            raise ValueError(
+                f"A rede já foi treinada com normalização '{normalizacao_atual}'. "
+                f"Não é possível retreinar com '{a.normalizacao}'. "
+                "Utilize a mesma normalização ou treine uma nova rede."
+            )
+
+        # Divide novamente, mas mantém os parâmetros originais.
+        divisao = dividir(
+            dataset,
+            *percentuais,
+            seed=a.seed_divisao
+        )
+        divisao = _aplicar_normalizador(divisao, normalizador_salvo)
+
+    else:
+        # Primeiro treinamento: calcula os parâmetros normalmente.
+        divisao = preparar(
+            dataset,
+            percentuais,
+            seed=a.seed_divisao,
+            normalizacao=a.normalizacao
+        )
     print(f"Dataset: {a.dados}  ({len(dataset)} exemplos)")
     print(f"Entradas: {', '.join(dataset.colunas_entrada)}  |  Saídas: {', '.join(dataset.colunas_saida)}")
     print(f"Divisão ({'/'.join(f'{p:g}' for p in percentuais)}%, seed={a.seed_divisao}): {divisao.resumo()}")
@@ -203,7 +245,17 @@ def cmd_prever(a):
     if a.arquivo:
         # Usa as colunas com os nomes registrados no treino; se não existirem, todas as colunas.
         with open(a.arquivo, newline="", encoding="utf-8-sig") as f:
-            leitor = csv.reader(f)
+            amostra = f.read(4096)
+            f.seek(0)
+
+            try:
+                delimitador = csv.Sniffer().sniff(
+                amostra, delimiters=",;\t"
+            ).delimiter
+            except csv.Error:
+                delimitador = ","
+
+            leitor = csv.reader(f, delimiter=delimitador)
             cab = [c.strip() for c in next(leitor)]
             if all(n in cab for n in nomes_ent):
                 idx = [cab.index(n) for n in nomes_ent]
@@ -212,15 +264,14 @@ def cmd_prever(a):
             for linha in leitor:
                 if any(c.strip() for c in linha):
                     lotes.append(_numeros(",".join(linha[i] for i in idx)))
-    if not lotes:
-        raise ValueError("Informe valores com --valores (ex.: --valores 250,60) ou --arquivo.")
+            if not lotes:
+                raise ValueError("Informe valores com --valores (ex.: --valores 250,60) ou --arquivo.")
 
-    for valores in lotes:
-        saida = preditor.prever(valores)
-        ent = ", ".join(f"{n}={v:g}" for n, v in zip(nomes_ent, valores))
-        sai = ", ".join(f"{n}={v:.6g}" for n, v in zip(nomes_sai, saida))
-        print(f"{ent}  →  {sai}")
-
+            for valores in lotes:
+                saida = preditor.prever(valores)
+                ent = ", ".join(f"{n}={v:g}" for n, v in zip(nomes_ent, valores))
+                sai = ", ".join(f"{n}={v:.6g}" for n, v in zip(nomes_sai, saida))
+                print(f"{ent}  →  {sai}")
 
 def cmd_info(a):
     rede = carregar_rede(a.rede)
@@ -268,7 +319,11 @@ def criar_parser():
     t.add_argument("--saidas", help="colunas de saída (padrão: última coluna)")
     t.add_argument("--divisao", default="70,15,15", help="percentuais TREINO,VALIDACAO,TESTE (padrão 70,15,15)")
     t.add_argument("--seed-divisao", type=int, default=None, help="semente da divisão do dataset")
-    t.add_argument("--normalizacao", default="nenhuma", choices=["nenhuma"] + normalizacoes_disponiveis())
+    t.add_argument(
+    "--normalizacao",
+    default=None,
+    choices=["nenhuma"] + normalizacoes_disponiveis()
+    )
     t.add_argument("--taxa", type=float, default=0.01, help="taxa de aprendizado (padrão 0.01)")
     t.add_argument("--epocas", type=int, default=500)
     t.add_argument("--seed-treino", type=int, default=None, help="semente do embaralhamento a cada época")
