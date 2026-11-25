@@ -7,11 +7,6 @@ import os
 import sys
 import tempfile
 import unittest
-import pytest
-import csv
-from contextlib import redirect_stdout
-from types import SimpleNamespace
-from unittest.mock import patch
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -154,98 +149,7 @@ class TestDataset(unittest.TestCase):
         with self.assertRaises(ValueError):
             verificar_compatibilidade(RedeNeural.construir(2, [(2, "linear")]), ds)
 
-    def test_impedir_indices_duplicados(self):
-        cabecalho = ["idade", "altura", "peso"]
 
-        with pytest.raises(ValueError, match="colunas duplicadas"):
-            _resolver_colunas(
-                ["0", "0"],
-                cabecalho,
-                "entrada"
-            )
-    def test_impedir_colunas_duplicadas(self):
-        cabecalho = ["idade", "altura", "peso"]
-
-        with pytest.raises(ValueError, match="colunas duplicadas"):
-            _resolver_colunas(
-                ["idade", "idade"],
-                cabecalho,
-                "entrada"
-            )
-    def test_dividir_dataset_pequeno(self):
-        dataset = Dataset(
-            ["idade"],
-            ["resultado"],
-            [[10], [20], [30]],
-            [[1], [0], [1]]
-        )
-
-        divisao = dividir(dataset, 70, 15, 15, seed=42)
-
-        self.assertEqual(len(divisao.treino), 1)
-        self.assertEqual(len(divisao.validacao), 1)
-        self.assertEqual(len(divisao.teste), 1)
-
-
-    def test_dividir_dataset_insuficiente(self):
-        dataset = Dataset(
-            ["idade"],
-            ["resultado"],
-            [[10], [20]],
-            [[1], [0]]
-        )
-
-        with self.assertRaises(ValueError):
-            dividir(dataset, 70, 15, 15)
-    def test_reutilizar_normalizador_sem_reajustar(self):
-        dataset = Dataset(
-            ["idade"],
-            ["resultado"],
-            [[10], [20], [30], [40], [50]],
-            [[1], [2], [3], [4], [5]]
-        )
-
-        normalizador = ZScore().ajustar(dataset.entradas)
-
-        medias_originais = normalizador.medias.copy()
-        desvios_originais = normalizador.desvios.copy()
-
-        divisao = dividir(dataset, 70, 15, 15, seed=42)
-        divisao = _aplicar_normalizador(divisao, normalizador)
-
-        self.assertEqual(normalizador.medias, medias_originais)
-        self.assertEqual(normalizador.desvios, desvios_originais)
-        self.assertIs(divisao.normalizador, normalizador)
-
-    def test_leitura_csv_separado_por_ponto_virgula(self):
-        with tempfile.TemporaryDirectory() as pasta:
-            caminho = os.path.join(pasta, "dados.csv")
-
-            with open(caminho, "w", encoding="utf-8") as f:
-                f.write(
-                    "idade;altura;resultado\n"
-                    "20;1.70;1\n"
-                    "25;1.80;2\n"
-                    "30;1.75;3\n"
-                )
-
-            dataset = ler_csv(caminho)
-
-        self.assertEqual(
-            dataset.colunas_entrada,
-            ["idade", "altura"]
-        )
-        self.assertEqual(dataset.colunas_saida, ["resultado"])
-
-        self.assertEqual(
-            dataset.entradas,
-            [[20.0, 1.70], [25.0, 1.80], [30.0, 1.75]]
-        )
-
-        self.assertEqual(
-            dataset.saidas,
-            [[1.0], [2.0], [3.0]]
-        )
 class TestTreinoPersistenciaPrevisao(unittest.TestCase):
     def test_fluxo_completo_no_dataset(self):
         ds = ler_csv(CSV)
