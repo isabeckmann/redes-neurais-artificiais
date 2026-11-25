@@ -1,14 +1,3 @@
-"""Inicialização de pesos sinápticos e vieses (requisito 1.5).
-
-- Xavier/Glorot (uniforme): w ~ U(-L, L), L = sqrt(6 / (fan_in + fan_out)).
-  Recomendada para Linear, Sigmoid e Tanh.
-- He/Kaiming (normal):      w ~ N(0, sqrt(2 / fan_in)).
-  Recomendada para ReLU.
-
-Os vieses são inicializados com 0 (valor armazenado como qualquer outro parâmetro).
-A reprodutibilidade é garantida pelo uso de um ``random.Random`` com semente.
-"""
-
 import math
 import random
 

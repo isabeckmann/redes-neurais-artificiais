@@ -1,5 +1,3 @@
-"""Mecanismo de treinamento com SGD (requisito 1.10)."""
-
 import math
 import random
 from dataclasses import dataclass
@@ -15,7 +13,7 @@ class TreinamentoDivergiu(RuntimeError):
 class RegistroEpoca:
     epoca: int
     mse_treino: float
-    mse_validacao: object  # float ou None se não houver conjunto de validação
+    mse_validacao: object
 
 
 class Treinador:

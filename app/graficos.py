@@ -1,7 +1,4 @@
-"""Gera um gráfico SVG simples (sem dependências) da curva de MSE por época."""
-
 import math
-
 
 def salvar_curva_mse_svg(historico, caminho, titulo="MSE por época"):
     largura, altura = 760, 420

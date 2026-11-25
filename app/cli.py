@@ -1,14 +1,3 @@
-"""Interface de linha de comando da aplicação.
-
-Subcomandos:
-    criar    – monta uma nova arquitetura e salva a rede inicializada
-    treinar  – treina uma rede salva com um dataset CSV (SGD)
-    avaliar  – calcula o MSE de uma rede sobre um dataset (ou subconjunto)
-    prever   – executa a rede sobre novos valores de entrada
-    info     – mostra a arquitetura de uma rede salva
-    menu     – modo interativo (padrão quando nenhum subcomando é informado)
-"""
-
 import argparse
 import csv
 import os
@@ -22,8 +11,6 @@ from mlp.inicializacao import METODOS
 
 from .graficos import salvar_curva_mse_svg
 
-
-# ---------------------------------------------------------------- utilitários
 def _lista(texto):
     """'a, b ,c' → ['a', 'b', 'c'] (lista vazia para texto vazio/None)."""
     if not texto:
@@ -58,8 +45,6 @@ def _camadas(texto, nome):
 def _fmt(v):
     return "—" if v is None else f"{v:.6g}"
 
-
-# ------------------------------------------------------------------ comandos
 def cmd_criar(a):
     ocultas = _camadas(a.ocultas, "--ocultas")
     saida = _camadas(a.saida, "--saida")
@@ -114,7 +99,6 @@ def cmd_treinar(a):
                 "Utilize a mesma normalização ou treine uma nova rede."
             )
 
-        # Divide novamente, mas mantém os parâmetros originais.
         divisao = dividir(
             dataset,
             *percentuais,
@@ -123,7 +107,6 @@ def cmd_treinar(a):
         divisao = _aplicar_normalizador(divisao, normalizador_salvo)
 
     else:
-        # Primeiro treinamento: calcula os parâmetros normalmente.
         divisao = preparar(
             dataset,
             percentuais,
@@ -145,7 +128,6 @@ def cmd_treinar(a):
         if r.epoca == 1 or r.epoca % intervalo == 0 or r.epoca == a.epocas:
             print(f"{r.epoca:>7} {_fmt(r.mse_treino):>16} {_fmt(r.mse_validacao):>16}")
 
-    # A normalização passa a fazer parte da rede (usada na previsão e salva no arquivo).
     rede.normalizacao = divisao.normalizador
     if a.vies_saida_media and "treinamento" not in meta:
         n = len(divisao.treino)
@@ -243,7 +225,6 @@ def cmd_prever(a):
 
     lotes = [_numeros(v) for v in (a.valores or [])]
     if a.arquivo:
-        # Usa as colunas com os nomes registrados no treino; se não existirem, todas as colunas.
         with open(a.arquivo, newline="", encoding="utf-8-sig") as f:
             amostra = f.read(4096)
             f.seek(0)
@@ -293,7 +274,6 @@ def cmd_info(a):
                 print(f"  N{j}: vies={n.vies:.6g}  pesos=[{', '.join(f'{w:.6g}' for w in n.pesos)}]")
 
 
-# -------------------------------------------------------------------- parser
 def criar_parser():
     ativs = ", ".join(ativacoes_disponiveis())
     p = argparse.ArgumentParser(

@@ -1,5 +1,3 @@
-"""Testes automatizados.  Executar com:  python -m unittest discover -s tests -v"""
-
 import io
 import json
 import math

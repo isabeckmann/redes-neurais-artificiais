@@ -1,11 +1,3 @@
-"""Cálculo do erro — Erro Quadrático Médio / MSE (requisito 1.7).
-
-Erro de um exemplo com m saídas:      E = (1/m) · Σ_k (y_k − t_k)²
-Gradiente em relação a cada saída:     ∂E/∂y_k = (2/m) · (y_k − t_k)
-MSE de um conjunto com N exemplos:     MSE = (1/N) · Σ_n E_n
-"""
-
-
 def erro_quadratico(saidas, esperadas):
     """Erro quadrático médio de um único exemplo (média sobre as saídas)."""
     if len(saidas) != len(esperadas):

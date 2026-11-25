@@ -1,12 +1,4 @@
-"""Normalização dos atributos de entrada (requisito 1.9).
-
-Os parâmetros são ajustados (``ajustar``) somente com o conjunto de treinamento
-e depois aplicados (``transformar``) aos três subconjuntos e às novas entradas
-da previsão. As saídas esperadas nunca são normalizadas.
-"""
-
 from typing import List
-
 
 class Normalizador:
     nome = ""

@@ -1,8 +1,3 @@
-"""Interface web local (só biblioteca padrão): python main.py web  →  http://127.0.0.1:8000
-
-Reaproveita a biblioteca ``mlp``: nada de algoritmo é reimplementado aqui.
-"""
-
 import json
 import os
 import tempfile

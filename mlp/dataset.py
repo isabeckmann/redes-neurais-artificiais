@@ -1,5 +1,3 @@
-"""Leitura e preparação de datasets (requisito 1.9)."""
-
 import csv
 import random
 from dataclasses import dataclass, field

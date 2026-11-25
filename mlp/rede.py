@@ -1,7 +1,4 @@
-"""Entidade Rede Neural (requisitos 1.3, 1.6 e 1.8)."""
-
 from typing import Optional
-
 from .camada import Camada
 from .erro import erro_quadratico, gradiente_erro
 from .inicializacao import criar_gerador

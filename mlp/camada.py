@@ -1,5 +1,3 @@
-"""Entidade Camada (requisito 1.2)."""
-
 from .ativacoes import obter_ativacao
 from .inicializacao import gerar_pesos, gerar_vies, metodo_recomendado
 from .neuronio import Neuronio

@@ -1,6 +1,3 @@
-"""Mecanismo de previsão (requisito 1.12)."""
-
-
 class Preditor:
     """Executa uma rede treinada sobre novos valores (somente propagação direta).
 

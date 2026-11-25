@@ -1,13 +1,4 @@
-"""Funções de ativação e suas derivadas (requisito 1.4).
-
-Cada função de ativação expõe:
-    - ``calcular(z)``: valor da função para a soma ponderada ``z``;
-    - ``derivada(z, saida)``: derivada da função em relação a ``z``. A saída já
-      calculada é recebida para evitar recomputações (ex.: sigmoid e tanh).
-"""
-
 import math
-
 
 class FuncaoAtivacao:
     """Classe base das funções de ativação."""
@@ -42,7 +33,6 @@ class Sigmoid(FuncaoAtivacao):
     nome = "sigmoid"
 
     def calcular(self, z):
-        # Forma numericamente estável (evita overflow em exp para |z| grande).
         if z >= 0:
             return 1.0 / (1.0 + math.exp(-z))
         e = math.exp(z)

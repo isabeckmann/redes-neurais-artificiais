@@ -1,30 +1,3 @@
-"""Persistência da rede neural em JSON (requisito 1.11).
-
-Formato (documentado também no README):
-
-{
-  "formato": "mlp-json",
-  "versao": 1,
-  "n_entradas": 2,
-  "n_camadas": 2,
-  "camadas": [
-    {
-      "n_neuronios": 4,
-      "ativacao": "tanh",
-      "inicializacao": "xavier",
-      "neuronios": [ {"pesos": [w1, w2], "vies": b}, ... ]
-    },
-    ...                              (a última camada é a de saída)
-  ],
-  "normalizacao": null | {"tipo": "minmax", "parametros": {"minimos": [...], "maximos": [...]}}
-                       | {"tipo": "zscore", "parametros": {"medias": [...], "desvios": [...]}},
-  "metadados": { ... informações livres: colunas, hiperparâmetros, MSEs ... }
-}
-
-Os números de ponto flutuante são gravados com ``repr`` pelo módulo json, o
-que garante reconstrução exata e, portanto, saídas idênticas após carregar.
-"""
-
 import json
 import os
 

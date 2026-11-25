@@ -1,5 +1,3 @@
-"""Modo interativo: pergunta os parâmetros e executa os mesmos comandos da CLI."""
-
 from mlp import ativacoes_disponiveis, normalizacoes_disponiveis
 from mlp.dataset import ler_cabecalho
 

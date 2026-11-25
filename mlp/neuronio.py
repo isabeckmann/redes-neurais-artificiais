@@ -1,6 +1,3 @@
-"""Entidade Neurônio (requisito 1.1)."""
-
-
 class Neuronio:
     """Neurônio artificial.
 
