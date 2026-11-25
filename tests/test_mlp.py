@@ -6,6 +6,10 @@ import os
 import sys
 import tempfile
 import unittest
+import pytest 
+from mlp.dataset import _resolver_colunas
+import pytest
+from mlp.dataset import _resolver_colunas
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -144,7 +148,49 @@ class TestDataset(unittest.TestCase):
         with self.assertRaises(ValueError):
             verificar_compatibilidade(RedeNeural.construir(2, [(2, "linear")]), ds)
 
+    def test_impedir_indices_duplicados(self):
+        cabecalho = ["idade", "altura", "peso"]
 
+        with pytest.raises(ValueError, match="colunas duplicadas"):
+            _resolver_colunas(
+                ["0", "0"],
+                cabecalho,
+                "entrada"
+            )
+    def test_impedir_colunas_duplicadas(self):
+        cabecalho = ["idade", "altura", "peso"]
+
+        with pytest.raises(ValueError, match="colunas duplicadas"):
+            _resolver_colunas(
+                ["idade", "idade"],
+                cabecalho,
+                "entrada"
+            )
+    def test_dividir_dataset_pequeno(self):
+        dataset = Dataset(
+            ["idade"],
+            ["resultado"],
+            [[10], [20], [30]],
+            [[1], [0], [1]]
+        )
+
+        divisao = dividir(dataset, 70, 15, 15, seed=42)
+
+        self.assertEqual(len(divisao.treino), 1)
+        self.assertEqual(len(divisao.validacao), 1)
+        self.assertEqual(len(divisao.teste), 1)
+
+
+    def test_dividir_dataset_insuficiente(self):
+        dataset = Dataset(
+            ["idade"],
+            ["resultado"],
+            [[10], [20]],
+            [[1], [0]]
+        )
+
+        with self.assertRaises(ValueError):
+            dividir(dataset, 70, 15, 15)
 class TestTreinoPersistenciaPrevisao(unittest.TestCase):
     def test_fluxo_completo_no_dataset(self):
         ds = ler_csv(CSV)
