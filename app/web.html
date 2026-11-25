@@ -16,6 +16,7 @@ button{background:var(--ac);color:#fff;border:0;margin-top:12px;cursor:pointer}b
 .k{display:flex;gap:8px;flex-wrap:wrap}.k div{flex:1;min-width:110px;background:var(--bg);border-radius:8px;padding:8px}
 .k b{display:block;font-size:18px}.k span{font-size:12px;color:var(--mut)}
 canvas{width:100%;height:260px;background:var(--bg);border-radius:8px}
+.plots{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px}.plots canvas{height:240px}.plots h3{font-size:13px;margin:0 0 4px}
 pre{white-space:pre-wrap;font-size:12px;margin:0}.err{color:#d33}
 </style></head><body><h1>Rede neural MLP — treino e validação</h1>
 <div class="g"><div>
@@ -26,6 +27,7 @@ pre{white-space:pre-wrap;font-size:12px;margin:0}.err{color:#d33}
 <div class="c"><h2>Arquitetura</h2>
 <label>Camadas ocultas (neurônios:ativação, separadas por vírgula)</label><input id="oc" value="8:tanh">
 <label>Camada de saída</label><input id="sa" value="1:linear">
+<label>Inicialização</label><select id="ini"><option value="">automática por ativação</option><option value="xavier">Xavier</option><option value="he">He</option></select>
 <label>Seed dos pesos</label><input id="seed" type="number" value="42"></div>
 <div class="c"><h2>Treinamento (SGD)</h2>
 <div class="r"><div><label>Treino/Val/Teste (%)</label><input id="div" value="70,15,15"></div><div><label>Seed divisão</label><input id="sd" type="number" value="42"></div></div>
@@ -34,11 +36,14 @@ pre{white-space:pre-wrap;font-size:12px;margin:0}.err{color:#d33}
 <div class="ck"><label><input type="checkbox" id="vm" checked>viés de saída = média do treino</label></div>
 <button id="go">Treinar</button><pre id="msg"></pre></div>
 <div class="c"><h2>Prever</h2><label>Valores das entradas (vírgula)</label><input id="pv" value="250,60">
-<button id="bp">Prever com a última rede</button><pre id="po"></pre></div>
+<button id="bp">Prever com a rede carregada</button><pre id="po"></pre></div>
+<div class="c"><h2>Rede</h2><label>Carregar rede JSON (criada pela web ou CLI)</label><input type="file" id="redeArq" accept=".json,application/json">
+<pre id="redeMsg"></pre><div class="r"><div><label>Salvar cópia como</label><input id="nomeRede" value="minha_rede.json"></div><button id="salvar">Salvar como</button></div>
+<button id="baixar">Baixar JSON da rede ativa</button></div>
 </div><div>
 <div class="c k" id="kpi"><div><span>Treine uma rede para ver os resultados</span></div></div>
 <div class="c"><h2>Curva de MSE por época</h2><canvas id="cv1"></canvas></div>
-<div class="c"><h2>Teste: previsto × real (a diagonal é o ideal)</h2><canvas id="cv2"></canvas></div>
+<div class="c"><h2>Teste: previsto × real por saída (a diagonal é o ideal)</h2><div id="cv2" class="plots"></div></div>
 <div class="c"><pre id="desc"></pre></div></div></div>
 <script>
 const $=i=>document.getElementById(i);let CSV="";
@@ -61,13 +66,17 @@ function linha(cv,xs,series,cores){const W=cv.width=cv.clientWidth*2,H=cv.height
  series.forEach((s,k)=>{c.strokeStyle=cores[k];c.lineWidth=3;c.beginPath();s.forEach((v,i)=>{if(v==null)return;
  const x=55+i/(xs.length-1||1)*(W-65),y=H-30-(v-mn)/(mx-mn||1)*(H-40);i?c.lineTo(x,y):c.moveTo(x,y)});c.stroke()});
  c.fillStyle=cores[0];c.fillText("treino",70,14);c.fillStyle=cores[1];c.fillText("validação",120,14);c.restore()}
-function disp(cv,p){const W=cv.width=cv.clientWidth*2,H=cv.height=520,c=cv.getContext("2d");
- const v=p.flat(),mn=Math.min(...v),mx=Math.max(...v);eixo(c,W,H,mn,mx,mn,mx);
- const X=a=>55+(a-mn)/(mx-mn||1)*(W-65),Y=a=>H-30-(a-mn)/(mx-mn||1)*(H-40);
+function disp(root,pares,nomes){root.innerHTML="";if(!pares.length)return;
+ const n=pares[0][0].length;for(let k=0;k<n;k++){const box=document.createElement("div"),titulo=document.createElement("h3"),cv=document.createElement("canvas");
+ titulo.textContent=nomes[k]||`Saída ${k+1}`;box.append(titulo,cv);root.append(box);
+ const pontos=pares.map(([reais,previstos])=>[reais[k],previstos[k]]);dispUma(cv,pontos)}}
+function dispUma(cv,p){const W=cv.width=cv.clientWidth*2,H=cv.height=480,c=cv.getContext("2d"),v=p.flat(),mn=Math.min(...v),mx=Math.max(...v);
+ eixo(c,W,H,mn,mx,mn,mx);const X=a=>55+(a-mn)/(mx-mn||1)*(W-65),Y=a=>H-30-(a-mn)/(mx-mn||1)*(H-40);
  c.strokeStyle="#d33";c.lineWidth=2;c.beginPath();c.moveTo(X(mn),Y(mn));c.lineTo(X(mx),Y(mx));c.stroke();
  c.fillStyle="#4f46e5aa";p.forEach(([t,y])=>{c.beginPath();c.arc(X(t),Y(y),6,0,7);c.fill()})}
 $("go").onclick=async()=>{const b=$("go");b.disabled=true;$("msg").className="";$("msg").textContent="Treinando…";
  const r=await post("/api/treinar",{csv:CSV,entradas:marc("e"),saidas:marc("s"),ocultas:$("oc").value,saida:$("sa").value,
+ inicializacao:$("ini").value,
  seed:+$("seed").value,divisao:$("div").value.split(",").map(Number),seedDivisao:+$("sd").value,normalizacao:$("nm").value,
  taxa:$("tx").value,epocas:$("ep").value,seedTreino:+$("st").value,viesMedia:$("vm").checked});b.disabled=false;
  if(r.erro){$("msg").className="err";return $("msg").textContent=r.erro}
@@ -76,7 +85,15 @@ $("go").onclick=async()=>{const b=$("go");b.disabled=true;$("msg").className="";
  $("kpi").innerHTML=k("MSE treino",r.mse.treino)+k("MSE validação",r.mse.validacao,"média: "+fmt(r.baseline.validacao))+k("MSE teste",r.mse.teste,"média: "+fmt(r.baseline.teste))+
  k("RMSE teste",Math.sqrt(r.mse.teste),"erro típico (unid. da saída)");
  linha($("cv1"),r.historico.map(h=>h[0]),[r.historico.map(h=>h[1]),r.historico.map(h=>h[2])],["#4f46e5","#e08a00"]);
- disp($("cv2"),r.pares_teste);$("desc").textContent=r.descricao};
+ disp($("cv2"),r.pares_teste,r.colunas_saida);$("desc").textContent=r.descricao};
 $("bp").onclick=async()=>{const r=await post("/api/prever",{valores:$("pv").value.split(",").map(Number)});
  $("po").textContent=r.erro||"Saída: "+r.saida.map(v=>v.toFixed(4)).join(", ")};
+$("redeArq").onchange=async e=>{const f=e.target.files[0];if(!f)return;
+ try{const r=await post("/api/carregar",{rede:JSON.parse(await f.text())});if(r.erro)throw Error(r.erro);
+  $("redeMsg").className="";$("redeMsg").textContent=`Rede carregada: ${f.name} (${r.n_entradas} entrada(s), ${r.n_saidas} saída(s))`;
+  $("desc").textContent=r.descricao;if(r.colunas_entrada.length)$("pv").placeholder=r.colunas_entrada.join(", ");$("po").textContent="";
+ }catch(err){$("redeMsg").className="err";$("redeMsg").textContent="Não foi possível carregar: "+err.message}};
+$("salvar").onclick=async()=>{const r=await post("/api/salvar-como",{nome:$("nomeRede").value});
+ $("redeMsg").className=r.erro?"err":"";$("redeMsg").textContent=r.erro||`Rede salva em ${r.arquivo}`};
+$("baixar").onclick=()=>{window.location.href="/api/baixar"};
 </script></body></html>

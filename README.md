@@ -61,14 +61,19 @@ python main.py web --porta 8080   # outra porta
 Abra o endereço no navegador. A página permite:
 
 - escolher um CSV da pasta `datasets/` ou enviar outro arquivo, e marcar as colunas de entrada e de saída;
-- definir camadas ocultas e de saída (`neurônios:ativação`), seeds, divisão treino/validação/teste, normalização, taxa, épocas e o viés de saída pela média do treino;
-- treinar e ver o MSE de treino/validação/teste, a curva de MSE por época e o gráfico previsto × real do conjunto de teste (junto com a referência de quem sempre prevê a média);
-- prever novos valores com a última rede treinada.
+- configurar camadas ocultas e de saída (`neurônios:ativação`), inicialização automática, Xavier ou He, seeds, divisão treino/validação/teste, normalização, taxa, épocas e viés de saída pela média do treino;
+- treinar e ver o MSE de treino/validação/teste, a curva por época e gráficos previsto × real independentes para cada saída;
+- carregar um JSON de rede salvo pela CLI ou pela web, prever novos valores com a rede carregada e baixar o JSON ativo;
+- salvar a rede ativa com outro nome dentro de `modelos/`.
 
-A rede treinada é salva em `modelos/rede_web.json` (sobrescrito a cada treino). O
-servidor escuta apenas em `127.0.0.1` e usa só a biblioteca padrão; encerre com
-`Ctrl+C`. A API usada pela página: `GET /api/datasets`, `POST /api/cabecalho`,
-`POST /api/treinar` e `POST /api/prever`.
+A rede treinada é salva em `modelos/rede_web.json` (sobrescrito a cada treino).
+“Salvar como” grava uma cópia com o nome informado nessa mesma pasta; “Baixar
+JSON” baixa a rede ativa para o computador. Para carregar uma rede, selecione o
+JSON gerado por `python main.py criar` ou `python main.py treinar`.
+O servidor escuta apenas em `127.0.0.1` e usa só a biblioteca padrão; encerre com
+`Ctrl+C`. A API usada pela página: `GET /api/datasets`, `GET /api/baixar`,
+`POST /api/cabecalho`, `POST /api/treinar`, `POST /api/prever`, `POST /api/carregar`
+e `POST /api/salvar-como`.
 
 ### Linha de comando
 
@@ -164,8 +169,10 @@ validação/teste), a rede parte prevendo a média e aprende só o desvio. É op
 e fica registrada nos metadados.
 
 **Interface web.** `app/web.py` apenas orquestra `mlp` (ler CSV, construir, dividir, treinar,
-salvar, prever); nenhum algoritmo é reimplementado. Os mesmos parâmetros da CLI estão
-disponíveis, exceto `--inicializacao` (usa o método recomendado por ativação).
+salvar, carregar e prever); nenhum algoritmo é reimplementado. A inicialização pode ser
+automática (He para ReLU e Xavier nas demais ativações), Xavier ou He. Arquivos de rede
+carregados usam o mesmo formato JSON da CLI; cada saída do conjunto de teste tem seu
+próprio gráfico previsto × real.
 
 **Referência para o dataset.** A variância das produtividades é ≈ 61.600 (MSE de
 quem sempre prevê a média) e a variância *dentro* de cada combinação

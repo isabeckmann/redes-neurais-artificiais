@@ -9,6 +9,7 @@ from mlp import (
     salvar_rede, verificar_compatibilidade,
 )
 from mlp.dataset import ler_cabecalho
+from mlp.persistencia import rede_de_dict, rede_para_dict
 
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SAIDA = os.path.join(RAIZ, "modelos", "rede_web.json")
@@ -41,7 +42,9 @@ def api_treinar(d):
     finally:
         os.unlink(caminho)
     arq = _camadas(d["ocultas"]) + _camadas(d["saida"])
-    rede = RedeNeural.construir(len(ds.colunas_entrada), arq, seed=d.get("seed"))
+    rede = RedeNeural.construir(
+        len(ds.colunas_entrada), arq, seed=d.get("seed"), inicializacao=d.get("inicializacao") or None,
+    )
     verificar_compatibilidade(rede, ds)
     div = preparar(ds, tuple(d["divisao"]), seed=d.get("seedDivisao"), normalizacao=d.get("normalizacao") or None)
     rede.normalizacao = div.normalizador
@@ -68,12 +71,12 @@ def api_treinar(d):
         "colunas_entrada": ds.colunas_entrada, "colunas_saida": ds.colunas_saida,
         "divisao": {"percentuais": d["divisao"], "seed": d.get("seedDivisao")},
         "treinamento": {"algoritmo": "SGD", "taxa_aprendizado": float(d["taxa"]), "epocas": int(d["epocas"]),
-                        "seed": d.get("seedTreino"), "vies_saida_media": bool(d.get("viesMedia"))},
+                "seed": d.get("seedTreino"), "vies_saida_media": bool(d.get("viesMedia"))},
         "resultado": {"mse_treino": res["treino"], "mse_validacao": res["validacao"], "mse_teste": res["teste"]},
     })
     salvar_rede(rede, SAIDA)
     ESTADO["rede"] = rede
-    pares = [[t[0], rede.propagar(x)[0]] for x, t in zip(div.teste.entradas, div.teste.saidas)]
+    pares = [[t, rede.propagar(x)] for x, t in zip(div.teste.entradas, div.teste.saidas)]
     return {
         "historico": [[r.epoca, r.mse_treino, r.mse_validacao] for r in hist],
         "mse": res, "baseline": {"validacao": base(div.validacao), "teste": base(div.teste)},
@@ -82,8 +85,41 @@ def api_treinar(d):
     }
 
 
+def api_carregar(d):
+    rede = rede_de_dict(d["rede"])
+    ESTADO["rede"] = rede
+    metadados = rede.metadados
+    return {
+        "descricao": rede.descrever(), "n_entradas": rede.n_entradas, "n_saidas": rede.n_saidas,
+        "colunas_entrada": metadados.get("colunas_entrada", []),
+        "colunas_saida": metadados.get("colunas_saida", []),
+    }
+
+
+def _rede_ativa():
+    rede = ESTADO["rede"]
+    if rede is None and os.path.exists(SAIDA):
+        rede = carregar_rede(SAIDA)
+        ESTADO["rede"] = rede
+    return rede
+
+
+def api_salvar_como(d):
+    rede = _rede_ativa()
+    if rede is None:
+        return {"erro": "Carregue ou treine uma rede primeiro."}
+    nome = os.path.basename(d["nome"].strip())
+    if nome in ("", ".", "..") or nome != d["nome"].strip():
+        return {"erro": "Informe apenas um nome de arquivo, sem diretórios."}
+    if not nome.lower().endswith(".json"):
+        nome += ".json"
+    caminho = os.path.join(RAIZ, "modelos", nome)
+    salvar_rede(rede, caminho)
+    return {"arquivo": os.path.relpath(caminho, RAIZ)}
+
+
 def api_prever(d):
-    rede = ESTADO["rede"] or (carregar_rede(SAIDA) if os.path.exists(SAIDA) else None)
+    rede = _rede_ativa()
     if rede is None:
         return {"erro": "Treine uma rede primeiro."}
     ESTADO["rede"] = rede
@@ -91,6 +127,7 @@ def api_prever(d):
 
 
 ROTAS = {"/api/cabecalho": api_cabecalho, "/api/treinar": api_treinar, "/api/prever": api_prever}
+ROTAS.update({"/api/carregar": api_carregar, "/api/salvar-como": api_salvar_como})
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -102,6 +139,17 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(corpo)
 
     def do_GET(self):
+        if self.path == "/api/baixar":
+            rede = _rede_ativa()
+            if rede is None:
+                return self._enviar(404, b'{"erro":"Nenhuma rede carregada."}', "application/json")
+            corpo = json.dumps(rede_para_dict(rede), ensure_ascii=False, indent=2).encode("utf-8")
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_header("Content-Disposition", 'attachment; filename="rede.json"')
+            self.send_header("Content-Length", str(len(corpo)))
+            self.end_headers()
+            return self.wfile.write(corpo)
         if self.path == "/api/datasets":
             pasta = os.path.join(RAIZ, "datasets")
             nomes = sorted(f for f in os.listdir(pasta) if f.endswith(".csv")) if os.path.isdir(pasta) else []
@@ -117,7 +165,7 @@ class Handler(BaseHTTPRequestHandler):
         try:
             corpo = json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0))) or b"{}")
             resp = func(corpo)
-        except (ValueError, KeyError, RuntimeError, FileNotFoundError) as e:
+        except (ValueError, KeyError, RuntimeError, FileNotFoundError, TypeError, AttributeError, IndexError) as e:
             resp = {"erro": str(e)}
         self._enviar(200, json.dumps(resp).encode(), "application/json")
 
