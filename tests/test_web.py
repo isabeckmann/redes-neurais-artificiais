@@ -1,10 +1,13 @@
 import json
 import os
+import sys
 import tempfile
 import threading
 import unittest
 import urllib.request
 from unittest import mock
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app import web
 from mlp import Preditor, RedeNeural, carregar_rede, salvar_rede

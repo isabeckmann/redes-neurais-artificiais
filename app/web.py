@@ -16,6 +16,15 @@ SAIDA = os.path.join(RAIZ, "modelos", "rede_web.json")
 ESTADO: Dict[str, Optional[RedeNeural]] = {"rede": None}
 
 
+def _caminho_exibicao(caminho):
+    """Caminho relativo à raiz do projeto; absoluto se estiver fora dela (ex.: outro drive no Windows)."""
+    try:
+        relativo = os.path.relpath(caminho, RAIZ)
+    except ValueError:
+        return caminho
+    return caminho if relativo.startswith("..") else relativo
+
+
 def _camadas(texto):
     return [(int(q), a.strip().lower()) for q, a in (i.split(":") for i in texto.split(",") if i.strip())]
 
@@ -81,7 +90,7 @@ def api_treinar(d):
         "historico": [[r.epoca, r.mse_treino, r.mse_validacao] for r in hist],
         "mse": res, "baseline": {"validacao": base(div.validacao), "teste": base(div.teste)},
         "pares_teste": pares, "colunas_entrada": ds.colunas_entrada, "colunas_saida": ds.colunas_saida,
-        "descricao": rede.descrever(), "divisao": div.resumo(), "arquivo": os.path.relpath(SAIDA, RAIZ),
+        "descricao": rede.descrever(), "divisao": div.resumo(), "arquivo": _caminho_exibicao(SAIDA),
     }
 
 
@@ -115,7 +124,7 @@ def api_salvar_como(d):
         nome += ".json"
     caminho = os.path.join(RAIZ, "modelos", nome)
     salvar_rede(rede, caminho)
-    return {"arquivo": os.path.relpath(caminho, RAIZ)}
+    return {"arquivo": _caminho_exibicao(caminho)}
 
 
 def api_prever(d):
