@@ -36,7 +36,8 @@ app/                    interface
 datasets/dataset.csv    dataset fornecido (179 exemplos: sementes_m2, nitrogenio_kg_ha, produtividade_kg_ha)
 modelos/                redes, históricos e gráficos gerados (exemplos incluídos)
   rede_web.json         rede salva pela interface web (sobrescrita a cada treino)
-tests/test_mlp.py       testes automatizados
+tests/test_mlp.py       testes da biblioteca e da CLI
+tests/test_web.py       testes da interface web
 ```
 
 ## Uso
@@ -136,9 +137,10 @@ python main.py info --rede modelos/rede_treinada.json --pesos
 python -m unittest discover -s tests -v
 ```
 
-São 14 testes. Incluem verificação do gradiente do backpropagation por diferenças finitas,
-reprodutibilidade por seed, XOR, divisão/normalização do dataset e
-equivalência das saídas após salvar e carregar. A interface web não tem testes automatizados.
+São 26 testes. `tests/test_mlp.py` inclui verificação do gradiente do backpropagation por
+diferenças finitas, reprodutibilidade por seed, XOR, divisão/normalização do dataset,
+equivalência das saídas após salvar e carregar e os comandos da CLI. `tests/test_web.py`
+cobre a API da interface web (treino com várias saídas, carregar/prever/salvar como e download do JSON).
 
 ## Decisões de implementação
 
